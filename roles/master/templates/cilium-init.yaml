@@ -1,0 +1,28 @@
+ipam:
+  operator:
+    clusterPoolIPv4PodCIDR: {{ PoolIPv4PodCIDR }}
+localRedirectPolicy: true
+serviceAccounts:
+  etcd:
+    create: false
+  preflight:
+    create: false
+  relay:
+    create: false
+  ui:
+    create: false
+  clustermeshApiserver:
+    create: false
+  clustermeshcertgen:
+    create: false
+  hubblecertgen:
+    create: false
+image:
+  useDigest: false
+containerRuntime:
+  integration: crio
+hubble:
+  enabled: false
+operator:
+  image:
+    useDigest: false
