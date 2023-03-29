@@ -1,95 +1,21 @@
 ---
-# 1-st control node
-- name: check if kubeadm has already run
-  stat:
-    path: "/etc/kubernetes/pki/ca.key"
-  register: kubeadm_ca
+## init first node
 
-- meta: end_play
-  when: kubeadm_ca.stat.exists
-
-- name: create /etc/kubernetes directory
-  file:
-    path: /etc/kubernetes
-    state: directory
-
-- name: copy kubeadm-config.yaml
-  template:
-    src: init-config.yaml
-    dest: /etc/kubernetes/kubeadm-config.yaml
-  become: yes
-
-- name: Init master control node
-  shell: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
-  register: kubeadm_init
-  become: yes 
-
-- name: Add directory for config file
-  file:
-    path: /home/{{ ansible_user }}/.kube
-    state: directory
-  become: yes
-
-- name: copy config file
-  ansible.builtin.copy:
-    src: /etc/kubernetes/admin.conf
-    dest: /home/{{ ansible_user }}/.kube/config
-    remote_src: yes
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: '0600'
-  become: yes
-
-- name: Kubelet enable
-  service:
-    name: kubelet
-    state: started
-    enabled: yes
-  become: yes
+- name: init first control plane
+  include_tasks: init-cluster.yaml
+  when: inventory_hostname == groups['k8s_masters'][0]
 
 ## cilium
 
-- name: copy cilium manifest
-  template:
-    src: cilium-init.yaml
-    dest: /etc/kubernetes/cilium-init.yaml
-  become: yes
-
-- name: add cilium chart repo
-  kubernetes.core.helm_repository:
-    name: cilium
-    repo_url: "https://helm.cilium.io/"
-
-- name: deploy cilium chart with values
-  kubernetes.core.helm:
-    name: cilium
-    chart_ref: cilium/cilium
-    chart_version: "{{ cilium_version }}"
-    release_namespace: kube-system
-    values_files:
-      - /etc/kubernetes/cilium-init.yaml
+- name: cilium install 
+  include_tasks: cilium.yaml
+  when: inventory_hostname == groups['k8s_masters'][0]
 
 ## nodelocaldns
 
-- name: download nodelocaldns.yaml from git
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/v{{ kube_version }}/cluster/addons/dns/nodelocaldns/nodelocaldns.yaml
-    dest: ~/k8s/nodelocaldns.yaml
-    mode: '0644'
-
-- name: update nodelocaldns manifest
-  ansible.builtin.shell: |
-    dnsserver=0.0.0.0 && \
-    localdns=169.254.20.10 && \
-    kubedns=$(kubectl get svc kube-dns -n kube-system -o jsonpath={.spec.clusterIP}) && \
-    kubedomain=$(kubectl get cm kubeadm-config -n kube-system -o jsonpath={.data.ClusterConfiguration} | grep dnsDomain: | cut -d" " -f4) && \
-    sed -i 's/bind __PILLAR__LOCAL__DNS__ __PILLAR__DNS__SERVER__/bind '$dnsserver'/g; s/health __PILLAR__LOCAL__DNS__:8080/health/g; s/__PILLAR__LOCAL__DNS__/'$localdns'/g;' ~/k8s/nodelocaldns.yaml && \
-    sed -i 's/__PILLAR__DNS__SERVER__/'$kubedns'/g; s/__PILLAR__DNS__DOMAIN__/'$kubedomain'/g;' ~/k8s/nodelocaldns.yaml && \
-    sed -i 's/force_tcp/prefer_udp/g; /host:/d; /hostNetwork:/d; s/]/, "-skipteardown=true", "-setupinterface=false", "-setupiptables=false" ]/g' ~/k8s/nodelocaldns.yaml
-
-- name: Deploy nodelocaldns
-  ansible.builtin.shell: |
-    kubectl apply -f ~/k8s/nodelocaldns.yaml
+- name: install nodelocaldns
+  include_tasks: nodelocaldns.yaml
+  when: inventory_hostname == groups['k8s_masters'][0]
 
 #- name: Wait for coredns started
 #  shell:

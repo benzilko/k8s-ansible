@@ -1,0 +1,21 @@
+- name: download nodelocaldns.yaml from git
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/v{{ kube_version }}/cluster/addons/dns/nodelocaldns/nodelocaldns.yaml
+    dest: ~/k8s/nodelocaldns.yaml
+    mode: '0644'
+
+
+- name: update nodelocaldns manifest
+  ansible.builtin.shell: |
+    dnsserver=0.0.0.0 && \
+    localdns=169.254.20.10 && \
+    kubedns=$(kubectl get svc kube-dns -n kube-system -o jsonpath={.spec.clusterIP}) && \
+    kubedomain=$(kubectl get cm kubeadm-config -n kube-system -o jsonpath={.data.ClusterConfiguration} | grep dnsDomain: | cut -d" " -f4) && \
+    sed -i 's/bind __PILLAR__LOCAL__DNS__ __PILLAR__DNS__SERVER__/bind '$dnsserver'/g; s/health __PILLAR__LOCAL__DNS__:8080/health/g; s/__PILLAR__LOCAL__DNS__/'$localdns'/g;' ~/k8s/nodelocaldns.yaml && \
+    sed -i 's/__PILLAR__DNS__SERVER__/'$kubedns'/g; s/__PILLAR__DNS__DOMAIN__/'$kubedomain'/g;' ~/k8s/nodelocaldns.yaml && \
+    sed -i 's/force_tcp/prefer_udp/g; /host:/d; /hostNetwork:/d; s/]/, "-skipteardown=true", "-setupinterface=false", "-setupiptables=false" ]/g' ~/k8s/nodelocaldns.yaml
+
+- name: Deploy nodelocaldns
+  ansible.builtin.shell: |
+    kubectl apply -f ~/k8s/nodelocaldns.yaml
+

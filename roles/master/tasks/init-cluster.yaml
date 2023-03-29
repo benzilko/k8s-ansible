@@ -1,0 +1,49 @@
+---
+# 1-st control node
+- name: check if kubeadm has already run
+  stat:
+    path: "/etc/kubernetes/pki/ca.key"
+  register: kubeadm_ca
+
+- meta: end_play
+  when: kubeadm_ca.stat.exists
+
+- name: create /etc/kubernetes directory
+  file:
+    path: /etc/kubernetes
+    state: directory
+
+- name: copy kubeadm-config.yaml
+  template:
+    src: init-config.yaml
+    dest: /etc/kubernetes/kubeadm-config.yaml
+  become: yes
+
+- name: Init master control node
+  shell: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
+  register: kubeadm_init
+  become: yes
+
+- name: Add directory for config file
+  file:
+    path: /home/{{ ansible_user }}/.kube
+    state: directory
+  become: yes
+
+- name: copy config file
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/{{ ansible_user }}/.kube/config
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+  become: yes
+
+- name: Kubelet enable
+  service:
+    name: kubelet
+    state: started
+    enabled: yes
+  become: yes
+
