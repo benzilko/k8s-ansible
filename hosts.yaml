@@ -2,15 +2,15 @@ k8s_masters:
   hosts:
     # Control nodes
     master01-k8s.polinesso.loc:
-    # master02-k8s.polinesso.loc:
+    master02-k8s.polinesso.loc:
     # master03-k8s.polinesso.loc:
 k8s_workers:
   hosts:
     # Worker nodes
-#    worker01-k8s.polinesso.loc:
+    worker01-k8s.polinesso.loc:
 #    worker02-k8s.polinesso.loc:
 #    worker03-k8s.polinesso.loc:
 k8s_cluster:
   children:
     k8s_masters:
-#    k8s_workers:
+    k8s_workers:

@@ -6,13 +6,13 @@ ansible_user: kubeadm
 kube_version: 1.24.9
 helm_version: v3.11.2
 
-
 kube_domain_name: cluster.local
-service_cidr: "10.233.0.0/18"
-pod_network_cidr: "10.233.64.0/18"
+service_cidr: "10.96.0.0/12"
+pod_network_cidr: "10.200.0.0/14"
 
 #cilium
-PoolIPv4PodCIDR: "10.200.0.0/14"
+cilium_version: 1.12.7
+PoolIPv4PodCIDR: "{{ pod_network_cidr }}"
 
 
 # calico

@@ -12,19 +12,23 @@
       --token {{ hostvars[groups['k8s_masters'][0]].join_token.stdout }} \
       --discovery-token-ca-cert-hash sha256:{{ hostvars[groups['k8s_masters'][0]].discovery_token_ca_cert_hash.stdout }} \
       --control-plane --certificate-key {{ hostvars[groups['k8s_masters'][0]].certificate_key.stdout }}
-
-# Add link
+  become: yes
 
 - name: Add directory for config file
   file:
-    path: /root/.kube
+    path: /home/{{ ansible_user }}/.kube
     state: directory
+  become: yes
 
-- name: Add link for config file
-  file:
+- name: copy config file
+  ansible.builtin.copy:
     src: /etc/kubernetes/admin.conf
-    dest: /root/.kube/config
-    state: link
+    dest: /home/{{ ansible_user }}/.kube/config
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+  become: yes
 
 # Почему то в 1.25 на AlmaLinux 8 не ставится enabled
 - name: Kubelet enable
@@ -32,3 +36,4 @@
     name: kubelet
     state: started
     enabled: yes
+  become: yes

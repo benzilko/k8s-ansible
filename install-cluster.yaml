@@ -22,9 +22,9 @@
 #      when: ha_cluster_virtual_ip is defined and ha_cluster_virtual_ip != ""
     - role: master
       when: inventory_hostname == groups['k8s_masters'][0]
-#    - role: second_controls
+    - role: second_controls
 
-#- name: Install worker nodes
-#  hosts: groups['k8s_masters'][0],k8s_workers
-#  roles:
-#    - workers
+- name: Install worker nodes
+  hosts: groups['k8s_masters'][0],k8s_workers
+  roles:
+    - workers

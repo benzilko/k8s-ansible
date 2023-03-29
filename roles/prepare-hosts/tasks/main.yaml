@@ -47,6 +47,16 @@
       value: 28633 
   become: yes  
 
+#- name: Set Sysctl on master node(s)
+#  when: inventory_hostname in groups['k8s_masters']
+#  sysctl:
+#    name: "{{ item.name }}"
+#    value: "{{ item.value }}"
+#    state: present
+#  with_items:
+#    - name: net.ipv4.ip_nonlocal_bind
+#  become: yes
+
 - name: enable system params
   ansible.builtin.shell: |
     sysctl --system
@@ -127,6 +137,7 @@
   ansible.builtin.file:
     path: /etc/crio/crio.conf.d/
     state: directory
+  become: yes
 
 - name: setup crun
   copy:
@@ -163,6 +174,12 @@
 
 #################
 
+- name: create a directory k8s
+  ansible.builtin.file:
+    path: ~/k8s
+    state: directory
+  when: inventory_hostname == groups['k8s_masters'][0]  
+
 - name: install helm on master node(s)
   ansible.builtin.shell: |
     curl -O -L 'https://get.helm.sh/helm-{{ helm_version}}-linux-amd64.tar.gz' && \
@@ -171,17 +188,11 @@
   become: yes
   when: inventory_hostname == groups['k8s_masters'][0]
 
-
-
-
-#- name: Set Sysctl on master node(s)
-#  when: inventory_hostname in groups['k8s_masters']
-#  sysctl:
-#    name: "{{ item.name }}"
-#    value: "{{ item.value }}"
-#    state: present
-#  with_items:
-#    - name: net.ipv4.ip_nonlocal_bind
+- name: install helm on master node(s)
+  ansible.builtin.shell: |
+    pip3 install PyYAML
+  become: yes
+  when: inventory_hostname == groups['k8s_masters'][0]
 
 #- name: Add PS1
 #  lineinfile:
